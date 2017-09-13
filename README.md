@@ -1,6 +1,6 @@
 # eclipselink-patched
 
-This repository contains patches that improve the stability and performance of EclipseLink 2.6.3, at least for use cases at Acrolinx. The patches are applied by loading this library before EclipseLink on the classpath. 
+This repository contains patches that improve the stability and performance of EclipseLink 2.6.5, at least for use cases at Acrolinx. The patches are applied by loading this library before EclipseLink on the classpath. 
 
 ## List of patches
 

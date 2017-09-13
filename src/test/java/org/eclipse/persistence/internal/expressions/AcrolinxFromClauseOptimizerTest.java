@@ -152,7 +152,7 @@ public class AcrolinxFromClauseOptimizerTest
                 + "\nin line 541. The AcrolinxFromClauseOptimizer needs to be called for optimizing the order of the FROM-statement for ms sql:\n"
                 + "AcrolinxFromClauseOptimizer.getAliasesOptimizedForTermDatabase(getTableAliases()).\n"
                 + "If CategoryEJB is not the first table in FROM the 'default grouping term'-query will take about 5 minutes instead of 15 sec.";
-        assertEquals(assertMsg, "2.6.3", Version.getVersion());
-        assertEquals(assertMsg, "20160428", Version.getBuildDate());
+        assertEquals(assertMsg, "2.6.5", Version.getVersion());
+        assertEquals(assertMsg, "20170607", Version.getBuildDate());
     }
 }

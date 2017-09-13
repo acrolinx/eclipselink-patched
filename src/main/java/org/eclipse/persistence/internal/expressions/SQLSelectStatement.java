@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 1998, 2014 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1998, 2016 Oracle and/or its affiliates. All rights reserved.
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 and Eclipse Distribution License v. 1.0
  * which accompanies this distribution.
@@ -16,21 +16,59 @@
  ******************************************************************************/
 package org.eclipse.persistence.internal.expressions;
 
-import java.io.*;
-import java.util.*;
-import org.eclipse.persistence.exceptions.*;
-import org.eclipse.persistence.expressions.*;
-import org.eclipse.persistence.history.*;
-import org.eclipse.persistence.internal.databaseaccess.*;
-import org.eclipse.persistence.internal.helper.*;
-import org.eclipse.persistence.internal.history.*;
-import org.eclipse.persistence.mappings.*;
-import org.eclipse.persistence.queries.*;
-import org.eclipse.persistence.internal.sessions.AbstractSession;
-import org.eclipse.persistence.descriptors.ClassDescriptor;
-
 import static org.eclipse.persistence.queries.ReadAllQuery.Direction.CHILD_TO_PARENT;
-import static org.eclipse.persistence.queries.ReadAllQuery.Direction.PARENT_TO_CHILD;
+
+import java.io.CharArrayWriter;
+import java.io.IOException;
+import java.io.Writer;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Hashtable;
+import java.util.IdentityHashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.Vector;
+
+import org.eclipse.persistence.descriptors.ClassDescriptor;
+import org.eclipse.persistence.exceptions.QueryException;
+import org.eclipse.persistence.exceptions.ValidationException;
+import org.eclipse.persistence.expressions.Expression;
+import org.eclipse.persistence.expressions.ExpressionBuilder;
+import org.eclipse.persistence.expressions.ExpressionOperator;
+import org.eclipse.persistence.history.AsOfClause;
+import org.eclipse.persistence.internal.databaseaccess.DatabaseCall;
+import org.eclipse.persistence.internal.databaseaccess.DatabasePlatform;
+import org.eclipse.persistence.internal.databaseaccess.DatasourcePlatform;
+import org.eclipse.persistence.internal.helper.DatabaseField;
+import org.eclipse.persistence.internal.helper.DatabaseTable;
+import org.eclipse.persistence.internal.helper.FunctionField;
+import org.eclipse.persistence.internal.helper.Helper;
+import org.eclipse.persistence.internal.helper.NonSynchronizedVector;
+import org.eclipse.persistence.internal.history.DecoratedDatabaseTable;
+import org.eclipse.persistence.internal.history.UniversalAsOfClause;
+import org.eclipse.persistence.internal.sessions.AbstractSession;
+import org.eclipse.persistence.mappings.AggregateCollectionMapping;
+import org.eclipse.persistence.mappings.AggregateObjectMapping;
+import org.eclipse.persistence.mappings.DatabaseMapping;
+import org.eclipse.persistence.mappings.DirectCollectionMapping;
+import org.eclipse.persistence.mappings.ManyToManyMapping;
+import org.eclipse.persistence.mappings.ObjectReferenceMapping;
+import org.eclipse.persistence.mappings.OneToManyMapping;
+import org.eclipse.persistence.mappings.OneToOneMapping;
+import org.eclipse.persistence.queries.DatabaseQuery;
+import org.eclipse.persistence.queries.ObjectLevelReadQuery;
+import org.eclipse.persistence.queries.ReadAllQuery;
+import org.eclipse.persistence.queries.ReadQuery;
+import org.eclipse.persistence.queries.SQLCall;
 
 /**
  * <p><b>Purpose</b>: Print SELECT statement.
@@ -100,6 +138,10 @@ public class SQLSelectStatement extends SQLStatement {
 
     /** It is used by subselect to re-normalize joins */
     protected Map<Expression, Expression> optimizedClonedExpressions;
+
+    /** Used for caching the field alias written to the query */
+    protected Map<DatabaseField, String> fieldAliases;
+    protected boolean shouldCacheFieldAliases;
 
     public SQLSelectStatement() {
         this.fields = org.eclipse.persistence.internal.helper.NonSynchronizedVector.newInstance(2);
@@ -225,7 +267,7 @@ public class SQLSelectStatement extends SQLStatement {
                     writer.write(newAlias.getQualifiedNameDelimited(printer.getPlatform()));
                 } else {// do normal outer stuff for Informix
                     for (Enumeration target = outerExpression.getMapping().getReferenceDescriptor().getTables().elements();
-                         target.hasMoreElements();) {
+                             target.hasMoreElements();) {
                         DatabaseTable newTarget = (DatabaseTable)target.nextElement();
                         DatabaseTable newAlias = outerExpression.aliasForTable(newTarget);
                         writer.write(", OUTER ");
@@ -396,7 +438,7 @@ public class SQLSelectStatement extends SQLStatement {
                             relationToKeyJoin = (Expression)indexToExpressionMap.get(Integer.valueOf(3));
                         }
 
-                        if ((outerExpression !=  null) && outerExpression.shouldUseOuterJoin()) {
+                        if (outerExpression.shouldUseOuterJoin()) {
                             writer.write(" LEFT OUTER JOIN ");
                         } else {
                             writer.write(" JOIN ");
@@ -585,14 +627,14 @@ public class SQLSelectStatement extends SQLStatement {
         // to avoid printing a comma before the first field
         printer.setIsFirstElementPrinted(false);
         for (Expression expression : getGroupByExpressions()) {
-            //      if (expression.isObjectExpression() && ((ObjectExpression)expression).getDescriptor() != null){
-            //in the case where the user is grouping by an entity we need to change this to the PKs
+      //      if (expression.isObjectExpression() && ((ObjectExpression)expression).getDescriptor() != null){
+                //in the case where the user is grouping by an entity we need to change this to the PKs
 //               for (String field : ((ObjectExpression)expression).getDescriptor().getPrimaryKeyFieldNames()){
 //                   writeFieldsFromExpression(printer, expression.getField(field), newFields);
-            //           }
-            //          }else{
-            writeFieldsFromExpression(printer, expression, newFields);
-            //     }
+    //           }
+  //          }else{
+                writeFieldsFromExpression(printer, expression, newFields);
+       //     }
         }
     }
 
@@ -761,6 +803,7 @@ public class SQLSelectStatement extends SQLStatement {
         currentAliasNumber = getCurrentAliasNumber();
 
         ExpressionIterator iterator = new ExpressionIterator() {
+            @Override
             public void iterate(Expression each) {
                 currentAliasNumber = each.assignTableAliasesStartingAt(currentAliasNumber);
             }
@@ -773,7 +816,7 @@ public class SQLSelectStatement extends SQLStatement {
             }
         } else {
             for (Enumeration expressionEnum = allExpressions.elements();
-                 expressionEnum.hasMoreElements();) {
+                     expressionEnum.hasMoreElements();) {
                 Expression expression = (Expression)expressionEnum.nextElement();
                 iterator.iterateOn(expression);
             }
@@ -806,6 +849,7 @@ public class SQLSelectStatement extends SQLStatement {
     /**
      * Print the SQL representation of the statement on a stream.
      */
+    @Override
     public DatabaseCall buildCall(AbstractSession session) {
         return buildCall(session, null);
     }
@@ -816,6 +860,7 @@ public class SQLSelectStatement extends SQLStatement {
      */
     public void computeDistinct() {
         ExpressionIterator iterator = new ExpressionIterator() {
+            @Override
             public void iterate(Expression expression) {
                 if (expression.isQueryKeyExpression() && ((QueryKeyExpression)expression).shouldQueryToManyRelationship()) {
                     // Aggregate should only use distinct as specified by the user.
@@ -870,6 +915,7 @@ public class SQLSelectStatement extends SQLStatement {
         // This iterator will pull all the table aliases out of an expression, and
         // put them in a map.
         ExpressionIterator iterator = new ExpressionIterator() {
+            @Override
             public void iterate(Expression each) {
                 TableAliasLookup aliases = each.getTableAliases();
 
@@ -1150,7 +1196,7 @@ public class SQLSelectStatement extends SQLStatement {
      * @return
      */
     public Integer addOuterJoinExpressionsHolders(ObjectExpression joinExpression, Expression outerJoinedMappingCriteria,
-                                                  Map<DatabaseTable, Expression> outerJoinedAdditionalJoinCriteria, ClassDescriptor descriptor) {
+            Map<DatabaseTable, Expression> outerJoinedAdditionalJoinCriteria, ClassDescriptor descriptor) {
 
         int index = getOuterJoinExpressionsHolders().size();
         OuterJoinExpressionHolder holder = new OuterJoinExpressionHolder(this, joinExpression, outerJoinedMappingCriteria,
@@ -1171,6 +1217,7 @@ public class SQLSelectStatement extends SQLStatement {
         int index = outerJoinExpressionHolders.size();
         OuterJoinExpressionHolder holder = new OuterJoinExpressionHolder(this, null, null,
                 outerJoinedAdditionalJoinCriteria, descriptor) {
+            @Override
             protected void process(boolean usesHistory, boolean isMapKeyHolder) {
                 sourceTable = descriptor.getTables().get(0);
                 int count = 0;
@@ -1529,7 +1576,7 @@ public class SQLSelectStatement extends SQLStatement {
                     allExpressions.add(criteria);
                 }
 
-                Map map = (Map)holder.outerJoinedAdditionalJoinCriteria;
+                Map map = holder.outerJoinedAdditionalJoinCriteria;
                 if (map != null) {
                     Iterator it = map.values().iterator();
                     while(it.hasNext()) {
@@ -1858,6 +1905,7 @@ public class SQLSelectStatement extends SQLStatement {
         setDistinctState(ObjectLevelReadQuery.UNCOMPUTED_DISTINCT);
     }
 
+    @Override
     public void setBuilder(ExpressionBuilder builder){
         this.builder = builder;
     }
@@ -2048,16 +2096,38 @@ public class SQLSelectStatement extends SQLStatement {
             printer.printString(field.getNameDelimited(printer.getPlatform()));
         }
         if (this.getUseUniqueFieldAliases()){
-            printer.printString(" AS "+ generatedAlias(field.getNameDelimited(printer.getPlatform())));
+            String alias = generatedAlias(field.getNameDelimited(printer.getPlatform()));
+            if (shouldCacheFieldAliases()) {
+                fieldAliases.put(field, alias);
+            }
+            printer.printString(" AS " + alias);
         }
     }
+
+    private boolean shouldCacheFieldAliases() {
+        return shouldCacheFieldAliases;
+    }
+
+    public void enableFieldAliasesCaching() {
+        fieldAliases = new HashMap<>();
+        shouldCacheFieldAliases = true;
+    }
+
+    public String getAliasFor(DatabaseField field) {
+        if (shouldCacheFieldAliases()) {
+            return fieldAliases.get(field);
+        } else {
+            return "";
+        }
+    }
+
     /**
-     * Returns a generated alias based on the column name.  If the new alias will be too long
-     * The alias is automatically truncated
-     */
+    * Returns a generated alias based on the column name.  If the new alias will be too long
+    * The alias is automatically truncated
+    */
     public String generatedAlias(String fieldName) {
         return "a" + String.valueOf(getNextFieldCounterValue());
-    }
+     }
 
     /**
      * INTERNAL:

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 1998, 2013 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1998, 2016 Oracle and/or its affiliates. All rights reserved.
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 and Eclipse Distribution License v. 1.0
  * which accompanies this distribution.
@@ -19,9 +19,8 @@ import java.sql.Statement;
 import oracle.jdbc.OraclePreparedStatement;
 
 import org.eclipse.persistence.internal.databaseaccess.DatabaseCall;
-import org.eclipse.persistence.internal.helper.DatabaseField;
-import org.eclipse.persistence.internal.sessions.AbstractSession;
-import org.eclipse.persistence.logging.SessionLog;
+
+import oracle.jdbc.OraclePreparedStatement;
 
 /**
  * ATTN: This is a literal copy of the class of the same name from the EclipseLink 2.6.3 source
@@ -51,6 +50,7 @@ public class Oracle10Platform extends Oracle9Platform  {
      * @param max
      * @return
      */
+    @Override
     protected String buildFirstRowsHint(int max){
         //bug 374136: override setting the FIRST_ROWS hint as this is not needed on Oracle10g
         return "";
@@ -96,36 +96,13 @@ public class Oracle10Platform extends Oracle9Platform  {
 
     /**
      * INTERNAL:
-     * Write LOB value - Oracle 10 deprecates some methods used in the superclass
-     */
-    @Override
-    public void writeLOB(DatabaseField field, Object value, ResultSet resultSet, AbstractSession session) throws SQLException {
-        if (isBlob(field.getType())) {
-            //change for 338585 to use getName instead of getNameDelimited
-            java.sql.Blob blob = (java.sql.Blob)resultSet.getObject(field.getName());
-            blob.setBytes(1, (byte[])value);
-            //impose the localization
-            session.log(SessionLog.FINEST, SessionLog.SQL, "write_BLOB", Long.valueOf(blob.length()), field.getName());
-        } else if (isClob(field.getType())) {
-            //change for 338585 to use getName instead of getNameDelimited
-            java.sql.Clob clob = (java.sql.Clob)resultSet.getObject(field.getName());
-            clob.setString(1, (String)value);
-            //impose the localization
-            session.log(SessionLog.FINEST, SessionLog.SQL, "write_CLOB", Long.valueOf(clob.length()), field.getName());
-        } else {
-            //do nothing for now, open to BFILE or NCLOB types
-        }
-    }
-
-    /**
-     * INTERNAL: Supports Batch Writing with Optimistic Locking.
+     * Supports Batch Writing with Optimistic Locking.
      *
      * PATCHED: Oracle Platform so that batch writes are disabled in presence of optimistic locks
      * (the default behavior of all the other database platforms)
      */
     @Override
-    public boolean canBatchWriteWithOptimisticLocking(final DatabaseCall call)
-    {
+    public boolean canBatchWriteWithOptimisticLocking(DatabaseCall call){
         return false;
     }
 }

@@ -6,8 +6,8 @@
 
     <groupId>com.acrolinx.thirdparty</groupId>
     <artifactId>eclipselink-patched</artifactId>
-    <version>2.6.3</version>
-    <description>EclipseLink 2.6.3 with additional patches by Acrolinx</description>
+    <version>2.6.5</version>
+    <description>EclipseLink 2.6.5 with additional patches by Acrolinx</description>
 
     <licenses>
         <license>
@@ -43,12 +43,13 @@
         <dependency>
             <groupId>org.eclipse.persistence</groupId>
             <artifactId>eclipselink</artifactId>
-            <version>2.6.3</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.acrolinx.thirdparty</groupId>
-            <artifactId>ojdbc6</artifactId>
-            <version>11.2.0.1</version>
+            <groupId>com.oracle.jdbc</groupId>
+            <artifactId>ojdbc8</artifactId>
+            <version>12.2.0.1</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
