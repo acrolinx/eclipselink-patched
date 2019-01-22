@@ -6,8 +6,8 @@
 
     <groupId>com.acrolinx.thirdparty</groupId>
     <artifactId>eclipselink-patched</artifactId>
-    <version>2.6.5</version>
-    <description>EclipseLink 2.6.5 with additional patches by Acrolinx</description>
+    <version>2.7.4</version>
+    <description>EclipseLink 2.7.4 with additional patches by Acrolinx</description>
 
     <licenses>
         <license>
