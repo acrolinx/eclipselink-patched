@@ -1,21 +1,24 @@
-/*******************************************************************************
- * Copyright (c) 1998, 2015 Oracle and/or its affiliates, IBM Corporation. All rights reserved.
- * This program and the accompanying materials are made available under the 
- * terms of the Eclipse Public License v1.0 and Eclipse Distribution License v. 1.0 
- * which accompanies this distribution. 
- * The Eclipse Public License is available at http://www.eclipse.org/legal/epl-v10.html
- * and the Eclipse Distribution License is available at 
+/*
+ * Copyright (c) 1998, 2018 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1998, 2018 IBM Corporation. All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v. 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0,
+ * or the Eclipse Distribution License v. 1.0 which is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
  *
- * Contributors:
- *     Oracle - initial API and implementation from Oracle TopLink
- *     09/14/2011-2.3.1 Guy Pelletier 
- *       - 357533: Allow DDL queries to execute even when Multitenant entities are part of the PU
- *     02/19/2015 - Rick Curtis  
- *       - 458877 : Add national character support
- *     02/23/2015-2.6 Dalia Abo Sheasha
- *       - 460607: Change DatabasePlatform StoredProcedureTerminationToken to be configurable
- *****************************************************************************/  
+ * SPDX-License-Identifier: EPL-2.0 OR BSD-3-Clause
+ */
+
+// Contributors:
+//     Oracle - initial API and implementation from Oracle TopLink
+//     09/14/2011-2.3.1 Guy Pelletier
+//       - 357533: Allow DDL queries to execute even when Multitenant entities are part of the PU
+//     02/19/2015 - Rick Curtis
+//       - 458877 : Add national character support
+//     02/23/2015-2.6 Dalia Abo Sheasha
+//       - 460607: Change DatabasePlatform StoredProcedureTerminationToken to be configurable
 package org.eclipse.persistence.platform.database;
 
 import java.io.*;
@@ -41,9 +44,9 @@ import org.eclipse.persistence.queries.*;
  *
  * @since TOPLink/Java 1.0
  */
-public class SQLServerPlatform extends org.eclipse.persistence.platform.database.DatabasePlatform {
-    /** Support for sequence objects added in SQL Server 2012 */
-    private boolean supportsSequenceObjects;
+public class SQLServerPlatform extends DatabasePlatform {
+    /** Support for sequence objects and OFFSET FETCH NEXT added in SQL Server 2012 */
+    private boolean isVersion11OrHigher;
     private boolean isConnectionDataInitialized;
 
     public SQLServerPlatform(){
@@ -59,11 +62,11 @@ public class SQLServerPlatform extends org.eclipse.persistence.platform.database
         }
         DatabaseMetaData dmd = connection.getMetaData();
         int databaseVersion = dmd.getDatabaseMajorVersion();
-        supportsSequenceObjects = databaseVersion >= 11;
+        isVersion11OrHigher = databaseVersion >= 11;
         isConnectionDataInitialized = true;
         this.driverSupportsNationalCharacterVarying = Helper.compareVersions(dmd.getDriverVersion(), "4.0.0") >= 0;
     }
-    
+
     /**
      * If using native SQL then print a byte[] as '0xFF...'
      */
@@ -177,20 +180,20 @@ public class SQLServerPlatform extends org.eclipse.persistence.platform.database
         fieldTypeMapping.put(Number.class, new FieldTypeDefinition("NUMERIC", 28).setLimits(28, -19, 19));
         // Create String column to support unicode characters
         if(getUseNationalCharacterVaryingTypeForString()){
-            fieldTypeMapping.put(String.class, new FieldTypeDefinition("NVARCHAR", DEFAULT_VARCHAR_SIZE));  
+            fieldTypeMapping.put(String.class, new FieldTypeDefinition("NVARCHAR", DEFAULT_VARCHAR_SIZE));
         }else {
-            fieldTypeMapping.put(String.class, new FieldTypeDefinition("VARCHAR", DEFAULT_VARCHAR_SIZE)); 
+            fieldTypeMapping.put(String.class, new FieldTypeDefinition("VARCHAR", DEFAULT_VARCHAR_SIZE));
         }
 
         fieldTypeMapping.put(Character.class, new FieldTypeDefinition("CHAR", 1));
-        
+
         fieldTypeMapping.put(Byte[].class, new FieldTypeDefinition("IMAGE", false));
         fieldTypeMapping.put(Character[].class, new FieldTypeDefinition("TEXT", false));
         fieldTypeMapping.put(byte[].class, new FieldTypeDefinition("IMAGE", false));
         fieldTypeMapping.put(char[].class, new FieldTypeDefinition("TEXT", false));
         fieldTypeMapping.put(java.sql.Blob.class, new FieldTypeDefinition("IMAGE", false));
         fieldTypeMapping.put(java.sql.Clob.class, new FieldTypeDefinition("TEXT", false));
-        
+
         fieldTypeMapping.put(java.sql.Date.class, new FieldTypeDefinition("DATETIME", false));
         fieldTypeMapping.put(java.sql.Time.class, new FieldTypeDefinition("DATETIME", false));
         fieldTypeMapping.put(java.sql.Timestamp.class, new FieldTypeDefinition("DATETIME2", false));
@@ -224,14 +227,14 @@ public class SQLServerPlatform extends org.eclipse.persistence.platform.database
 
     /**
      * INTERNAL:
-     * In SQLServer local temporary table created by one 
-     * PreparedStatement can't be used in another PreparedStatement. 
+     * In SQLServer local temporary table created by one
+     * PreparedStatement can't be used in another PreparedStatement.
      * Workaround is to use Statement instead of PreparedStatement.
      */
     public boolean dontBindUpdateAllQueryUsingTempTables() {
         return true;
     }
-    
+
     /**
      * Used for batch writing and sp defs.
      */
@@ -346,14 +349,14 @@ public class SQLServerPlatform extends org.eclipse.persistence.platform.database
      * UPDLOCK seems to behave exactly like Oracle's FOR UPDATE:
      * locking out updates and other reads with FOR UPDATE but allowing other reads without locks.
      * SQLServer seems to decide itself on the granularity of the lock - it could lock more than
-     * the returned rows (for instance a page). It could be forced to obtain 
+     * the returned rows (for instance a page). It could be forced to obtain
      * to make sure to obtain row level lock:
      * WITH (UPDLOCK, ROWLOCK)
      * However this approach is strongly discouraged because it can consume too
      * much resources: selecting 900 rows from and requiring a "personal"
      * lock for each row may not be feasible because of not enough memory available at the moment -
      * in that case SQLServer will wait until the resource becomes available.
-     * 
+     *
      */
     public String getSelectForUpdateString() {
         return " WITH (UPDLOCK)";
@@ -370,7 +373,7 @@ public class SQLServerPlatform extends org.eclipse.persistence.platform.database
     /**
      * INTERNAL:
      * Indicates whether locking clause should be printed after where clause by SQLSelectStatement.
-     * Example: 
+     * Example:
      *   on Oracle platform (method returns true):
      *     SELECT ADDRESS_ID, ... FROM ADDRESS WHERE (ADDRESS_ID = ?) FOR UPDATE
      *   on SQLServer platform (method returns false):
@@ -387,9 +390,9 @@ public class SQLServerPlatform extends org.eclipse.persistence.platform.database
         super.initializePlatformOperators();
         addOperator(operatorOuterJoin());
         addOperator(ExpressionOperator.simpleFunction(ExpressionOperator.Today, "GETDATE"));
-        // GETDATE returns both date and time. It is not the perfect match for 
+        // GETDATE returns both date and time. It is not the perfect match for
         // ExpressionOperator.currentDate and ExpressionOperator.currentTime
-        // However, there is no known function on sql server that returns just 
+        // However, there is no known function on sql server that returns just
         // the date or just the time.
         addOperator(ExpressionOperator.simpleFunction(ExpressionOperator.CurrentDate, "GETDATE"));
         addOperator(ExpressionOperator.simpleFunction(ExpressionOperator.CurrentTime, "GETDATE"));
@@ -450,7 +453,7 @@ public class SQLServerPlatform extends org.eclipse.persistence.platform.database
         exOperator.setNodeClass(ClassConstants.FunctionExpression_Class);
         return exOperator;
     }
-    
+
     /**
      * INTERNAL:
      * Use RTRIM(LTRIM(?)) function for trim.
@@ -459,7 +462,7 @@ public class SQLServerPlatform extends org.eclipse.persistence.platform.database
         ExpressionOperator exOperator = new ExpressionOperator();
         exOperator.setType(ExpressionOperator.FunctionOperator);
         exOperator.setSelector(ExpressionOperator.Trim);
-        Vector v = org.eclipse.persistence.internal.helper.NonSynchronizedVector.newInstance(2);
+        Vector v = NonSynchronizedVector.newInstance(2);
         v.add("RTRIM(LTRIM(");
         v.add("))");
         exOperator.printsAs(v);
@@ -467,7 +470,7 @@ public class SQLServerPlatform extends org.eclipse.persistence.platform.database
         exOperator.setNodeClass(ClassConstants.FunctionExpression_Class);
         return exOperator;
     }
-    
+
     /**
      * INTERNAL:
      * Build Trim operator.
@@ -476,7 +479,7 @@ public class SQLServerPlatform extends org.eclipse.persistence.platform.database
         ExpressionOperator exOperator = new ExpressionOperator();
         exOperator.setType(ExpressionOperator.FunctionOperator);
         exOperator.setSelector(ExpressionOperator.Trim2);
-        Vector v = org.eclipse.persistence.internal.helper.NonSynchronizedVector.newInstance(5);
+        Vector v = NonSynchronizedVector.newInstance(5);
         v.add("RTRIM(");
         v.add(" FROM LTRIM(");
         v.add(" FROM ");
@@ -499,7 +502,7 @@ public class SQLServerPlatform extends org.eclipse.persistence.platform.database
     public boolean isOutputAllowWithResultSet() {
         return false;
     }
-    
+
     public boolean isSQLServer() {
         return true;
     }
@@ -548,14 +551,14 @@ public class SQLServerPlatform extends org.eclipse.persistence.platform.database
     public ExpressionOperator modOperator() {
         ExpressionOperator result = new ExpressionOperator();
         result.setSelector(ExpressionOperator.Mod);
-        Vector v = org.eclipse.persistence.internal.helper.NonSynchronizedVector.newInstance();
+        Vector v = NonSynchronizedVector.newInstance();
         v.addElement(" % ");
         result.printsAs(v);
         result.bePostfix();
-        result.setNodeClass(org.eclipse.persistence.internal.expressions.FunctionExpression.class);
+        result.setNodeClass(FunctionExpression.class);
         return result;
     }
-    
+
     /**
      * Override the default SubstringSingleArg operator.
      */
@@ -563,7 +566,7 @@ public class SQLServerPlatform extends org.eclipse.persistence.platform.database
         ExpressionOperator result = new ExpressionOperator();
         result.setSelector(ExpressionOperator.SubstringSingleArg);
         result.setType(ExpressionOperator.FunctionOperator);
-        Vector v = org.eclipse.persistence.internal.helper.NonSynchronizedVector.newInstance();
+        Vector v = NonSynchronizedVector.newInstance();
         v.addElement("SUBSTRING(");
         v.addElement(",");
         v.addElement(", LEN(");
@@ -586,7 +589,7 @@ public class SQLServerPlatform extends org.eclipse.persistence.platform.database
     protected ExpressionOperator operatorOuterJoin() {
         ExpressionOperator result = new ExpressionOperator();
         result.setSelector(ExpressionOperator.EqualOuterJoin);
-        Vector v = org.eclipse.persistence.internal.helper.NonSynchronizedVector.newInstance();
+        Vector v = NonSynchronizedVector.newInstance();
         v.addElement(" =* ");
         result.printsAs(v);
         result.bePostfix();
@@ -687,7 +690,7 @@ public class SQLServerPlatform extends org.eclipse.persistence.platform.database
      */
     @Override
     public boolean supportsSequenceObjects() {
-        return supportsSequenceObjects;
+        return isVersion11OrHigher;
     }
 
     /**
@@ -696,27 +699,27 @@ public class SQLServerPlatform extends org.eclipse.persistence.platform.database
     public boolean supportsLocalTempTables() {
         return true;
     }
-     
+
     /**
      * INTERNAL:
      */
     protected String getCreateTempTableSqlPrefix() {
         return "CREATE TABLE ";
-    }          
+    }
 
     /**
      * INTERNAL:
      */
     public DatabaseTable getTempTableForTable(DatabaseTable table) {
         return new DatabaseTable("#" + table.getName(), table.getTableQualifier(), table.shouldUseDelimiters(), getStartDelimiter(), getEndDelimiter());
-    }          
+    }
 
     /**
      * INTERNAL:
      */
     public void writeUpdateOriginalFromTempTableSql(Writer writer, DatabaseTable table,
                                                     Collection pkFields,
-                                                    Collection assignedFields) throws IOException 
+                                                    Collection assignedFields) throws IOException
     {
         writer.write("UPDATE ");
         String tableName = table.getQualifiedNameDelimited(this);
@@ -728,5 +731,48 @@ public class SQLServerPlatform extends org.eclipse.persistence.platform.database
         writer.write(", ");
         writer.write(tempTableName);
         writeAutoJoinWhereClause(writer, tableName, tempTableName, pkFields, this);
-    }          
+    }
+
+    @Override
+    public void printSQLSelectStatement(DatabaseCall call, ExpressionSQLPrinter printer, SQLSelectStatement statement) {
+        ReadQuery query = statement.getQuery();
+        if (query == null || !isVersion11OrHigher || !shouldUseRownumFiltering()) {
+            super.printSQLSelectStatement(call, printer, statement);
+            return;
+        }
+        
+        int max = Math.max(0, query.getMaxRows());
+        int first = Math.max(0, query.getFirstResult());
+        
+        if (max == 0 && first == 0) {
+            super.printSQLSelectStatement(call, printer, statement);
+            return;
+        }
+        
+        // OFFSET + FETCH NEXT requires ORDER BY, so add an ordering if there are none
+        // this SQL will satisfy the query parser without actually changing the ordering of the rows
+        List<Expression> orderBy = statement.getOrderByExpressions();
+        if (orderBy.isEmpty()) {
+            orderBy.add(statement.getBuilder().literal("ROW_NUMBER() OVER (ORDER BY (SELECT null))"));
+        }
+        
+        // decide exact syntax to use, depending on whether a limit is specified (could just have an offset)
+        String offsetFetchSql;
+        List<?> offsetFetchArgs;
+        if (max == 0) {
+            offsetFetchSql = "? OFFSET ? ROWS";
+            offsetFetchArgs = Arrays.asList(first);
+        } else {
+            offsetFetchSql = "? OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+            offsetFetchArgs = Arrays.asList(first, max - first);
+        }
+        
+        // append to the last ORDER BY clause
+        orderBy.add(orderBy.remove(orderBy.size() - 1).sql(offsetFetchSql, offsetFetchArgs));
+        
+        super.printSQLSelectStatement(call, printer, statement);
+        
+        call.setIgnoreFirstRowSetting(true);
+        call.setIgnoreMaxResultsSetting(true);
+    }
 }
