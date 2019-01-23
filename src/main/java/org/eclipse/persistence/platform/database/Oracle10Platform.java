@@ -10,7 +10,7 @@
  * Contributors:
  *     Oracle - initial API and implementation from Oracle TopLink
  ******************************************************************************/
-package org.eclipse.persistence.platform.database.oracle;
+package org.eclipse.persistence.platform.database;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -21,6 +21,7 @@ import oracle.jdbc.OraclePreparedStatement;
 import org.eclipse.persistence.internal.databaseaccess.DatabaseCall;
 
 import oracle.jdbc.OraclePreparedStatement;
+import org.eclipse.persistence.platform.database.oracle.Oracle9Platform;
 
 /**
  * ATTN: This is a literal copy of the class of the same name from the EclipseLink 2.6.3 source
@@ -35,7 +36,7 @@ import oracle.jdbc.OraclePreparedStatement;
  * <p>
  * <b>Purpose:</b> Supports usage of certain Oracle JDBC specific APIs.
  */
-public class Oracle10Platform extends Oracle9Platform  {
+public class Oracle10Platform extends Oracle9Platform {
 
     public Oracle10Platform(){
         super();
