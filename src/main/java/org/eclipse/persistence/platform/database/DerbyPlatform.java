@@ -1,23 +1,20 @@
-/*
- * Copyright (c) 2005, 2018 Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2005, 2018 IBM Corporation. All rights reserved.
- *
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License v. 2.0 which is available at
- * http://www.eclipse.org/legal/epl-2.0,
- * or the Eclipse Distribution License v. 1.0 which is available at
+/*******************************************************************************
+ * Copyright 2005, 2015 Oracle and/or its affiliates, IBM Corporation. All rights reserved.
+ * This program and the accompanying materials are made available under the 
+ * terms of the Eclipse Public License v1.0 and Eclipse Distribution License v. 1.0 
+ * which accompanies this distribution. 
+ * The Eclipse Public License is available at http://www.eclipse.org/legal/epl-v10.html
+ * and the Eclipse Distribution License is available at 
  * http://www.eclipse.org/org/documents/edl-v10.php.
  *
- * SPDX-License-Identifier: EPL-2.0 OR BSD-3-Clause
- */
-
-// Contributors:
-//     Oracle - initial API and implementation from Oracle TopLink
-//     Sun Microsystems
-//     09/14/2011-2.3.1 Guy Pelletier
-//       - 357533: Allow DDL queries to execute even when Multitenant entities are part of the PU
-//     03/18/2015-2.6.0 Joe Grassel
-//       - 462498: Missing isolation level expression in SQL for Derby platform
+ * Contributors:
+ *     Oracle - initial API and implementation from Oracle TopLink
+ *     Sun Microsystems
+ *     09/14/2011-2.3.1 Guy Pelletier 
+ *       - 357533: Allow DDL queries to execute even when Multitenant entities are part of the PU
+ *     03/18/2015-2.6.0 Joe Grassel
+ *       - 462498: Missing isolation level expression in SQL for Derby platform
+ ******************************************************************************/
 package org.eclipse.persistence.platform.database;
 
 import org.eclipse.persistence.internal.databaseaccess.DatabaseCall;
@@ -103,7 +100,7 @@ public class DerbyPlatform extends DB2Platform
         return timestampQuery;
 
     }
-
+    
     /**
      * INTERNAL:
      * Not currently used.
@@ -207,7 +204,7 @@ public class DerbyPlatform extends DB2Platform
     protected boolean shouldTempTableSpecifyPrimaryKeys() {
         return false;
     }
-
+    
     /**
      * INTERNAL:
      */
@@ -234,13 +231,13 @@ public class DerbyPlatform extends DB2Platform
     @Override
     public void writeUpdateOriginalFromTempTableSql(Writer writer, DatabaseTable table,
                                                      Collection pkFields,
-                                                     Collection assignedFields) throws IOException
+                                                     Collection assignedFields) throws IOException 
     {
         writer.write("UPDATE ");
         String tableName = table.getQualifiedNameDelimited(this);
         writer.write(tableName);
         writer.write(" SET ");
-
+        
         String tempTableName = getTempTableForTable(table).getQualifiedNameDelimited(this);
         boolean isFirst = true;
         Iterator itFields = assignedFields.iterator();
@@ -260,14 +257,14 @@ public class DerbyPlatform extends DB2Platform
             writeAutoJoinWhereClause(writer, null, tableName, pkFields, this);
             writer.write(")");
         }
-
+        
         writer.write(" WHERE EXISTS(SELECT ");
         writer.write(((DatabaseField)pkFields.iterator().next()).getNameDelimited(this));
         writer.write(" FROM ");
         writer.write(tempTableName);
         writeAutoJoinWhereClause(writer, null, tableName, pkFields, this);
         writer.write(")");
-    }
+    }          
 
     /**
      * INTERNAL:
@@ -305,8 +302,8 @@ public class DerbyPlatform extends DB2Platform
         fieldTypeMapping.put(byte[].class, new FieldTypeDefinition("BLOB", MAX_BLOB));
         fieldTypeMapping.put(char[].class, new FieldTypeDefinition("CLOB", MAX_CLOB));
         fieldTypeMapping.put(java.sql.Blob.class, new FieldTypeDefinition("BLOB", MAX_BLOB));
-        fieldTypeMapping.put(java.sql.Clob.class, new FieldTypeDefinition("CLOB", MAX_CLOB));
-
+        fieldTypeMapping.put(java.sql.Clob.class, new FieldTypeDefinition("CLOB", MAX_CLOB));        
+        
         fieldTypeMapping.put(java.sql.Date.class, new FieldTypeDefinition("DATE", false));
         fieldTypeMapping.put(java.sql.Time.class, new FieldTypeDefinition("TIME", false));
         fieldTypeMapping.put(java.sql.Timestamp.class, new FieldTypeDefinition("TIMESTAMP", false));
@@ -327,7 +324,7 @@ public class DerbyPlatform extends DB2Platform
         if (jdbcType == DatabaseField.NULL_SQL_TYPE) {
             jdbcType = statement.getParameterMetaData().getParameterType(index);
         }
-
+        
         statement.setNull(index, jdbcType);
     }
 
@@ -364,15 +361,15 @@ public class DerbyPlatform extends DB2Platform
         exOperator.setNodeClass(ClassConstants.FunctionExpression_Class);
         return exOperator;
     }
-
+    
     /**
      * INTERNAL:
      * Use the JDBC maxResults and firstResultIndex setting to compute a value to use when
      * limiting the results of a query in SQL.  These limits tend to be used in two ways.
-     *
+     * 
      * 1. MaxRows is the index of the last row to be returned (like JDBC maxResults)
      * 2. MaxRows is the number of rows to be returned
-     *
+     * 
      * Derby uses case #2 and therefore the maxResults has to be altered based on the firstResultIndex.
      */
     @Override
@@ -382,7 +379,7 @@ public class DerbyPlatform extends DB2Platform
         }
         return maxResults - ((firstResultIndex >= 0) ? firstResultIndex : 0);
     }
-
+    
     /**
      * INTERNAL:
      * Print the SQL representation of the statement on a stream, storing the fields
@@ -403,7 +400,7 @@ public class DerbyPlatform extends DB2Platform
             max = statement.getQuery().getMaxRows();
             firstRow = statement.getQuery().getFirstResult();
         }
-
+        
         if (!(shouldUseRownumFiltering()) || (!(max > 0) && !(firstRow > 0))) {
             call.setFields(statement.printSQL(printer));
             statement.appendForUpdateClause(printer);
@@ -456,7 +453,7 @@ public class DerbyPlatform extends DB2Platform
     public boolean supportsSequenceObjects() {
         return this.isSequenceSupported;
     }
-
+    
     @Override
     public boolean isAlterSequenceObjectSupported() {
         return false;
@@ -472,7 +469,7 @@ public class DerbyPlatform extends DB2Platform
         writer.write(" RESTRICT");
         return writer;
     }
-
+    
     /**
      * INTERNAL:
      */
