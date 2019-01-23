@@ -143,16 +143,4 @@ public class AcrolinxFromClauseOptimizerTest
         return table;
     }
 
-    @Test
-    public void testVersionIsSameAsThePatchedSQLSelectStatementClass()
-    {
-        final String assertMsg = "If this test fails you probably updated EclipseLink. Please make sure: \n"
-                + "- to review the patched class:\n"
-                + SQLSelectStatement.class.getCanonicalName()
-                + "\nin line 541. The AcrolinxFromClauseOptimizer needs to be called for optimizing the order of the FROM-statement for ms sql:\n"
-                + "AcrolinxFromClauseOptimizer.getAliasesOptimizedForTermDatabase(getTableAliases()).\n"
-                + "If CategoryEJB is not the first table in FROM the 'default grouping term'-query will take about 5 minutes instead of 15 sec.";
-        assertEquals(assertMsg, "2.6.5", Version.getVersion());
-        assertEquals(assertMsg, "20170607", Version.getBuildDate());
-    }
 }
