@@ -22,6 +22,6 @@ public class EclipselinkVersionTest
 	public void versionTest() {
 		final String assertMsg = "If this test fails you probably updated EclipseLink. Please make sure to review the patched classes.";
 		assertEquals(assertMsg, "2.7.4", Version.getVersion());
-		assertEquals(assertMsg, "20190115", Version.getBuildDate());
+		assertEquals(assertMsg, "20181223", Version.getBuildDate());
 	}
 }
