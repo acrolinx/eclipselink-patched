@@ -699,7 +699,9 @@ public class SQLServerPlatform extends DatabasePlatform {
      */
     @Override
     public boolean supportsSequenceObjects() {
-        return isVersion11OrHigher;
+        // PATCHED Without this EclipseLink handles SEQUENCE field from old databases wrongly.
+        // See https://bugs.eclipse.org/bugs/show_bug.cgi?id=499233
+        return false;
     }
 
     /**
